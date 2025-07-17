@@ -31,19 +31,33 @@ class PROCLIGHT_PT_main_panel(Panel):
         box.prop(props, "base_energy")
         box.prop(props, "energy_variation")
         box.prop(props, "base_color")
+        # Generation Buttons
+        row = box.row(align=True)
+        row.operator("procedural_lighting.generate_lights", icon='ADD')
+        row.operator("procedural_lighting.clear_lights", icon='TRASH')
         box.prop(props, "color_variation")
+        # Global Intensity
+        box.separator()
+        box.label(text="Global Intensity", icon='LIGHT_HEMI')
+        box.prop(props, "global_intensity", slider=True)
+        box.prop(props, "intensity_curve")
+        box.operator("procedural_lighting.apply_global_intensity", icon='FILE_TICK')
+        
+        # Mood Renderer
+        box = layout.box()
+        box.label(text="Mood Renderer", icon='COLOR')
+        box.prop(props, "mood_type")
+        box.prop(props, "mood_intensity", slider=True)
+        # Always show Apply and Reset buttons
+        row = box.row(align=True)
+        row.operator("procedural_lighting.apply_mood", icon='COLORSET_01_VEC', text="Apply Mood")
+        row.operator("procedural_lighting.reset_mood", icon='LOOP_BACK', text="Reset Mood")
         
         # Management
         box = layout.box()
         box.label(text="Management", icon='SETTINGS')
         box.prop(props, "light_group_name")
         box.prop(props, "auto_parent")
-        
-        # Generation Buttons
-        layout.separator()
-        row = layout.row(align=True)
-        row.operator("procedural_lighting.generate_lights", icon='ADD')
-        row.operator("procedural_lighting.clear_lights", icon='TRASH')
 
 class PROCLIGHT_PT_effects_panel(Panel):
     """Rendering effects panel"""

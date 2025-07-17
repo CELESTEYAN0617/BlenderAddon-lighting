@@ -78,9 +78,13 @@ class PROCLIGHT_OT_generate_lights(Operator):
         # Set location
         light_object.location = location
         
-        # Apply energy with variation
+        # Apply energy with variation and global intensity
         energy_var = random.uniform(-props.energy_variation, props.energy_variation)
-        light_data.energy = props.base_energy * (1 + energy_var)
+        base_energy = props.base_energy * (1 + energy_var)
+        
+        # Apply global intensity with curve
+        final_energy = self.apply_intensity_curve(base_energy, props.global_intensity, props.intensity_curve)
+        light_data.energy = final_energy
         
         # Apply color with variation
         color_var = random.uniform(-props.color_variation, props.color_variation)
@@ -88,6 +92,17 @@ class PROCLIGHT_OT_generate_lights(Operator):
         light_data.color = color
         
         return light_object
+    
+    def apply_intensity_curve(self, base_energy, intensity, curve_type):
+        """Apply an intensity curve to energy value"""
+        if curve_type == 'LINEAR':
+            return base_energy * intensity
+        elif curve_type == 'EXPONENTIAL':
+            return base_energy * (intensity ** 2)
+        elif curve_type == 'LOGARITHMIC':
+            return base_energy * (1 + math.log(max(1, intensity)))
+        else:
+            return base_energy * intensity
     
     def generate_circle_pattern(self, props):
         """Generate lights in a circular pattern"""
@@ -239,7 +254,10 @@ class PROCLIGHT_OT_setup_volumetrics(Operator):
         """Create a volumetric material"""
         material = bpy.data.materials.new(name="VolumetricMaterial")
         material.use_nodes = True
-        material.node_tree.clear()
+        # Clear nodes (compatible with Blender 4.x, no clear method)
+        nodes = material.node_tree.nodes
+        while nodes:
+            nodes.remove(nodes[0])
         
         # Create nodes
         output_node = material.node_tree.nodes.new(type='ShaderNodeOutputMaterial')
@@ -247,7 +265,9 @@ class PROCLIGHT_OT_setup_volumetrics(Operator):
         
         # Set properties
         volume_scatter.inputs['Density'].default_value = props.volumetric_density
-        volume_scatter.inputs['Color'].default_value = (*props.base_color, 1.0)
+        # base_color needs to be a 3-element tuple, add1.0ke it RGBA
+        color = tuple(props.base_color) + (1.0,)
+        volume_scatter.inputs['Color'].default_value = color
         
         # Connect nodes
         material.node_tree.links.new(volume_scatter.outputs['Volume'], output_node.inputs['Volume'])
@@ -275,9 +295,9 @@ class PROCLIGHT_OT_setup_bloom(Operator):
         # Bloom setup
         glare = tree.nodes.new(type='CompositorNodeGlare')
         glare.glare_type = 'BLOOM'
-        glare.threshold = 1.0
-        glare.intensity = props.bloom_intensity
-        glare.size = 8
+        glare.threshold = max(0.0, 0.3 - props.bloom_intensity * 0.3)  # Lower threshold, more visible bloom
+        glare.mix = 0.8  # Increase mix value for more visible bloom effect
+        glare.size = 12  # Increase size for larger bloom range
         
         # Connect nodes
         tree.links.new(render_layers.outputs['Image'], glare.inputs['Image'])
@@ -330,6 +350,175 @@ class PROCLIGHT_OT_load_preset(Operator):
         
         return {'FINISHED'}
 
+class PROCLIGHT_OT_apply_global_intensity(Operator):
+    """Apply global intensity to all procedural lights"""
+    bl_idname = "procedural_lighting.apply_global_intensity"
+    bl_label = "Apply Global Intensity"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        import math
+        props = context.scene.procedural_lighting
+        for obj in bpy.data.objects:
+            if obj.name.startswith(props.light_group_name) and obj.type == 'LIGHT':
+                # Recalculate energy
+                base_energy = props.base_energy
+                # Assuming no energy and color variation, can be extended if needed
+                if props.intensity_curve == 'LINEAR':
+                    obj.data.energy = base_energy * props.global_intensity
+                elif props.intensity_curve == 'EXPONENTIAL':
+                    obj.data.energy = base_energy * (props.global_intensity ** 2)
+                elif props.intensity_curve == 'LOGARITHMIC':
+                    obj.data.energy = base_energy * (1 + math.log(max(1, props.global_intensity)))
+                else:
+                    obj.data.energy = base_energy * props.global_intensity
+        self.report({'INFO'}, "Applied global intensity to all lights")
+        return {'FINISHED'}
+
+class PROCLIGHT_OT_apply_mood(Operator):
+    """Apply mood lighting to scene"""
+    bl_idname = "procedural_lighting.apply_mood"
+    bl_label = "Apply Mood"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        props = context.scene.procedural_lighting
+        
+        if props.mood_type == 'NONE':
+            self.report({'INFO'}, "No mood selected")
+            return {'FINISHED'}
+        
+        # Apply mood to world only
+        self.apply_mood_to_world(context, props)
+        
+        # Don't apply mood to lights, keep user manually adjusted settings
+        # if props.auto_apply_mood:
+        #     self.apply_mood_to_lights(context, props)
+        
+        # Set mood as applied
+        props.mood_applied = True
+        
+        self.report({'INFO'}, f"Applied {props.mood_type} mood (world only, lights unchanged)")
+        return {'FINISHED'}
+    
+    def apply_mood_to_world(self, context, props):
+        """Apply mood to world background"""
+        world = context.scene.world
+        if not world:
+            world = bpy.data.worlds.new("World")
+            context.scene.world = world
+        
+        world.use_nodes = True
+        nodes = world.node_tree.nodes
+        links = world.node_tree.links
+        
+        # Clear existing nodes
+        nodes.clear()
+        
+        # Create output node
+        output_node = nodes.new(type='ShaderNodeOutputWorld')
+        
+        # Get mood colors
+        bg_color, bg_strength = self.get_mood_colors(props.mood_type, props.mood_intensity)
+        
+        # Create background node
+        bg_node = nodes.new(type='ShaderNodeBackground')
+        # Ensure color is 4-element RGBA format
+        if len(bg_color) == 3:
+            bg_node.inputs['Color'].default_value = (*bg_color, 1.0)
+        else:
+            bg_node.inputs['Color'].default_value = bg_color
+        bg_node.inputs['Strength'].default_value = bg_strength
+        
+        # Connect nodes
+        links.new(bg_node.outputs['Background'], output_node.inputs['Surface'])
+    
+    def apply_mood_to_lights(self, context, props):
+        """Apply mood to existing lights"""
+        for obj in bpy.data.objects:
+            if obj.name.startswith(props.light_group_name) and obj.type == 'LIGHT':
+                light_color, light_energy = self.get_mood_light_settings(props.mood_type, props.mood_intensity)
+                
+                # Apply color
+                obj.data.color = light_color
+                
+                # Apply energy
+                obj.data.energy = light_energy
+    
+    def get_mood_colors(self, mood_type, intensity):
+        """Get background color and strength for mood"""
+        mood_colors = {
+            'WARM': ((1.0, 0.6, 0.1, 1.0), 0.6), # 典型暖橙色
+            'COLD': ((0.2, 0.4, 0.8, 1.0), 0.4), # 冷蓝色
+            'DRAMATIC': ((0.05, 0.0, 0.1, 1.0), 0.5), # 深紫色
+            'ROMANTIC': ((0.7, 0.0, 0.3, 1.0), 0.6), # 粉紫色
+            'MYSTERIOUS': ((0.05, 0.05, 0.15, 1.0), 0.5), # 深蓝色
+            'ENERGETIC': ((0.9, 0.0, 0.2, 1.0), 0.9), # 亮黄色
+            'CALM': ((0.4, 0.6, 0.8, 1.0), 0.5), # 淡蓝色
+            'SUNSET': ((0.9, 0.4, 0.1, 1.0), 0.7), # 金橙色
+            'NIGHT': ((0.02, 0.03, 0.08, 1.0), 0.3), # 深蓝色
+        }
+        if mood_type in mood_colors:
+            color, strength = mood_colors[mood_type]
+            strength *= intensity
+            return color, strength
+        else:
+            return ((0.1, 0.1, 0.1, 1.0), 0.1)
+
+    def get_mood_light_settings(self, mood_type, intensity):
+        """Get light color and energy for mood"""
+        mood_lights = {
+            'WARM': ((1.0, 0.7, 0.2), 12.0),      # 暖黄光
+            'COLD': ((0.4, 0.7, 1.0), 10.0),      # 冷蓝光
+            'DRAMATIC': ((1.0, 0.1, 0.1), 15.0),  # 红光
+            'ROMANTIC': ((1.0, 0.5, 0.7), 8.0),   # 粉光
+            'MYSTERIOUS': ((0.0, 0.2, 0.4), 7.0), # 蓝光
+            'ENERGETIC': ((1.0, 1.0, 0.3), 18.0), # 黄光
+            'CALM': ((0.0, 0.6, 0.8), 7.0),       # 蓝光
+            'SUNSET': ((1.0, 0.6, 0.2), 11.0),    # 橙光
+            'NIGHT': ((0.0, 0.1, 0.2), 5.0),      # 夜光
+        }
+        if mood_type in mood_lights:
+            color, energy = mood_lights[mood_type]
+            energy *= intensity
+            return color, energy
+        else:
+            return ((1.0, 1.0, 1.0), 10.0)
+
+class PROCLIGHT_OT_reset_mood(Operator):
+    """Reset mood and restore original lighting"""
+    bl_idname = "procedural_lighting.reset_mood"
+    bl_label = "Reset Mood"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        props = context.scene.procedural_lighting
+        
+        # Reset world to default
+        world = context.scene.world
+        if world and world.use_nodes:
+            nodes = world.node_tree.nodes
+            links = world.node_tree.links
+            
+            # Clear existing nodes
+            nodes.clear()
+            
+            # Create default background
+            output_node = nodes.new(type='ShaderNodeOutputWorld')
+            bg_node = nodes.new(type='ShaderNodeBackground')
+            bg_node.inputs['Color'].default_value = (0.1, 0.1, 0.1, 1.0)
+            bg_node.inputs['Strength'].default_value = 0.1
+            # Connect nodes
+            links.new(bg_node.outputs['Background'], output_node.inputs['Surface'])
+        
+        # Don't reset lights, keep user manually adjusted settings
+        
+        # Reset mood state
+        props.mood_applied = False
+        props.mood_type = 'NONE'
+        self.report({'INFO'}, "Mood reset to default (lights unchanged)")
+        return {'FINISHED'}
+
 classes = [
     PROCLIGHT_OT_generate_lights,
     PROCLIGHT_OT_clear_lights,
@@ -337,6 +526,9 @@ classes = [
     PROCLIGHT_OT_setup_bloom,
     PROCLIGHT_OT_save_preset,
     PROCLIGHT_OT_load_preset,
+    PROCLIGHT_OT_apply_global_intensity,
+    PROCLIGHT_OT_apply_mood,
+    PROCLIGHT_OT_reset_mood,
 ]
 
 def register():

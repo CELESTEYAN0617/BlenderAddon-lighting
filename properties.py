@@ -11,7 +11,7 @@ from bpy.props import (
 )
 from bpy.types import PropertyGroup
 
-class LightPreset(PropertyGroup):
+class ProceduralLightPreset(PropertyGroup):
     """Individual light preset settings"""
     name: StringProperty(
         name="Preset Name",
@@ -98,7 +98,70 @@ class ProceduralLightingProperties(PropertyGroup):
         name="Base Energy",
         default=10.0,
         min=0.0,
-        max=1000.0
+        max=10000
+    )
+    
+    # Global Light Intensity Control
+    global_intensity: FloatProperty(
+        name="Global Intensity",
+        description="Global multiplier for all light intensities",
+        default=1.0,
+        min=0.0,
+        max=10,
+        soft_min=0.0,
+        soft_max=5    
+    )
+    
+    # Mood Renderer
+    mood_type: EnumProperty(
+        name="Mood",
+        description="Select a mood to automatically generate lighting",
+        items=[
+            ('NONE', "None", "No mood preset"),
+            ('WARM', "Warm", "Warm and cozy atmosphere"),
+            ('COLD', "Cold", "Cool and clinical atmosphere"),
+            ('DRAMATIC', "Dramatic", "Dark and dramatic atmosphere"),
+            ('ROMANTIC', "Romantic", "Soft and romantic lighting"),
+            ('MYSTERIOUS', "Mysterious", "Dark and mysterious atmosphere"),
+            ('ENERGETIC', "Energetic", "Bright and energetic lighting"),
+            ('CALM', "Calm", "Soft and peaceful atmosphere"),
+            ('SUNSET', "Sunset", "Golden hour lighting"),
+            ('NIGHT', "Night", "Night time atmosphere"),
+        ],
+        default='NONE'
+    )
+    
+    auto_apply_mood: BoolProperty(
+        name="Auto Apply Mood",
+        description="Automatically apply mood changes to existing lights",
+        default=True
+    )
+    
+    mood_intensity: FloatProperty(
+        name="Mood Intensity",
+        description="How strongly to apply the mood",
+        default=1.0,
+        min=0.0,
+        max=2.0,
+        soft_min=0.0,
+        soft_max=10.5    
+    )
+    
+    mood_applied: BoolProperty(
+        name="Mood Applied",
+        description="Whether a mood has been applied to the scene",
+        default=False
+    )
+    
+    intensity_curve: EnumProperty(
+        name="Intensity Curve",
+        description="How intensity affects light energy",
+        items=[
+            ('LINEAR', "Linear", "Linear intensity scaling"),
+            ('EXPONENTIAL', "Exponential", "Exponential intensity scaling"),
+            ('LOGARITHMIC', "Logarithmic", "Logarithmic intensity scaling"),
+        ],
+        default='LINEAR'
     )
     
     energy_variation: FloatProperty(
@@ -174,11 +237,11 @@ class ProceduralLightingProperties(PropertyGroup):
     )
     
     # Presets
-    presets: CollectionProperty(type=LightPreset)
+    presets: CollectionProperty(type=ProceduralLightPreset)
     active_preset_index: IntProperty(default=0)
 
 classes = [
-    LightPreset,
+    ProceduralLightPreset,
     ProceduralLightingProperties,
 ]
 
