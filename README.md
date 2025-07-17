@@ -1,4 +1,4 @@
-# Procedural Lighting System for Blender 4.1
+# Procedural Lighting System for Blender 4.5.0
 
 A comprehensive Blender addon for creating and managing procedural lighting systems with advanced rendering effects.
 
@@ -27,9 +27,10 @@ A comprehensive Blender addon for creating and managing procedural lighting syst
 
 ### Rendering Effects
 - **Volumetric Lighting**: Automatic volumetric setup with density control
+- **Mood Color Background**: Different theme color for the whole place
 - **Bloom Effects**: Compositor-based bloom with customizable intensity
 - **Light Baking**: Bake lighting to lightmaps for performance
-- **Cycles Integration**: Optimized for Cycles rendering engine
+
 
 ## Installation
 
