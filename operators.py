@@ -448,15 +448,15 @@ class PROCLIGHT_OT_apply_mood(Operator):
     def get_mood_colors(self, mood_type, intensity):
         """Get background color and strength for mood"""
         mood_colors = {
-            'WARM': ((1.0, 0.6, 0.1, 1.0), 0.6), # 典型暖橙色
-            'COLD': ((0.2, 0.4, 0.8, 1.0), 0.4), # 冷蓝色
-            'DRAMATIC': ((0.05, 0.0, 0.1, 1.0), 0.5), # 深紫色
-            'ROMANTIC': ((0.7, 0.0, 0.3, 1.0), 0.6), # 粉紫色
-            'MYSTERIOUS': ((0.05, 0.05, 0.15, 1.0), 0.5), # 深蓝色
-            'ENERGETIC': ((0.9, 0.0, 0.2, 1.0), 0.9), # 亮黄色
-            'CALM': ((0.4, 0.6, 0.8, 1.0), 0.5), # 淡蓝色
-            'SUNSET': ((0.9, 0.4, 0.1, 1.0), 0.7), # 金橙色
-            'NIGHT': ((0.02, 0.03, 0.08, 1.0), 0.3), # 深蓝色
+            'WARM': ((1.0, 0.6, 0.1, 1.0), 0.6), # warm orange light
+            'COLD': ((0.2, 0.4, 0.8, 1.0), 0.4), # cold blue light
+            'DRAMATIC': ((0.05, 0.0, 0.1, 1.0), 0.5), # deep purple light
+            'ROMANTIC': ((0.7, 0.0, 0.3, 1.0), 0.6), # pink purple light
+            'MYSTERIOUS': ((0.05, 0.05, 0.15, 1.0), 0.5), # deep blue light
+            'ENERGETIC': ((0.9, 0.0, 0.2, 1.0), 0.9), # bright yellow light
+            'CALM': ((0.4, 0.6, 0.8, 1.0), 0.5), # light blue light
+            'SUNSET': ((0.9, 0.4, 0.1, 1.0), 0.7), # golden orange light
+            'NIGHT': ((0.02, 0.03, 0.08, 1.0), 0.3), # deep blue light
         }
         if mood_type in mood_colors:
             color, strength = mood_colors[mood_type]
@@ -468,15 +468,15 @@ class PROCLIGHT_OT_apply_mood(Operator):
     def get_mood_light_settings(self, mood_type, intensity):
         """Get light color and energy for mood"""
         mood_lights = {
-            'WARM': ((1.0, 0.7, 0.2), 12.0),      # 暖黄光
-            'COLD': ((0.4, 0.7, 1.0), 10.0),      # 冷蓝光
-            'DRAMATIC': ((1.0, 0.1, 0.1), 15.0),  # 红光
-            'ROMANTIC': ((1.0, 0.5, 0.7), 8.0),   # 粉光
-            'MYSTERIOUS': ((0.0, 0.2, 0.4), 7.0), # 蓝光
-            'ENERGETIC': ((1.0, 1.0, 0.3), 18.0), # 黄光
-            'CALM': ((0.0, 0.6, 0.8), 7.0),       # 蓝光
-            'SUNSET': ((1.0, 0.6, 0.2), 11.0),    # 橙光
-            'NIGHT': ((0.0, 0.1, 0.2), 5.0),      # 夜光
+            'WARM': ((1.0, 0.7, 0.2), 12.0),      # yellow light
+            'COLD': ((0.4, 0.7, 1.0), 10.0),      # cold blue light
+            'DRAMATIC': ((1.0, 0.1, 0.1), 15.0),  # red light
+            'ROMANTIC': ((1.0, 0.5, 0.7), 8.0),   # pink light
+            'MYSTERIOUS': ((0.0, 0.2, 0.4), 7.0), # blue light
+            'ENERGETIC': ((1.0, 1.0, 0.3), 18.0), # yellow light
+            'CALM': ((0.0, 0.6, 0.8), 7.0),       # blue light
+            'SUNSET': ((1.0, 0.6, 0.2), 11.0),    # orange light
+            'NIGHT': ((0.0, 0.1, 0.2), 5.0),      # night light
         }
         if mood_type in mood_lights:
             color, energy = mood_lights[mood_type]
